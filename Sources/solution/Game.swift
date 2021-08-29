@@ -40,7 +40,7 @@ struct Game {
         var outputQueue = ""
         
         while true {
-            if computer.nextInstruction.opcode == .in {
+            if computer.nextInstruction == .in {
                 if computer.inputs.isEmpty {
                     return outputQueue
                 }

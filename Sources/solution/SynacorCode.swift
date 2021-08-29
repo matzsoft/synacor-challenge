@@ -8,18 +8,10 @@
 import Foundation
 
 class SynacorCode: Codable {
-    struct Instruction {
-        enum Opcode: UInt16 {
-            case halt = 0, set = 1, push = 2, pop = 3, eq = 4, gt = 5, jmp = 6, jt = 7
-            case jf = 8, add = 9, mult = 10, mod = 11, and = 12, or = 13, not = 14
-            case rmem = 15, wmem = 16, call = 17, ret = 18, out = 19, `in` = 20, noop = 21
-        }
-        
-        let opcode: Opcode
-
-        init( instruction: UInt16 ) {
-            opcode = Opcode( rawValue: instruction % 100 )!
-        }
+    enum Opcode: UInt16 {
+        case halt = 0, set = 1, push = 2, pop = 3, eq = 4, gt = 5, jmp = 6, jt = 7
+        case jf = 8, add = 9, mult = 10, mod = 11, and = 12, or = 13, not = 14
+        case rmem = 15, wmem = 16, call = 17, ret = 18, out = 19, `in` = 20, noop = 21
     }
 
     var ip:        Int
@@ -30,8 +22,8 @@ class SynacorCode: Codable {
     var halted:    Bool
     var debug:     Bool
     
-    var nextInstruction: Instruction {
-        return Instruction( instruction: memory[ip] )
+    var nextInstruction: Opcode {
+        return Opcode( rawValue: memory[ip] )!
     }
 
     init( memory: [UInt16] ) {
@@ -80,9 +72,8 @@ class SynacorCode: Codable {
 
     func step() throws -> Character? {
         guard !halted else { return nil }
-        let instruction = Instruction( instruction: memory[ip] )
         
-        switch instruction.opcode {
+        switch nextInstruction {
         case .halt:
             halted = true
         case .set:
@@ -177,7 +168,7 @@ class SynacorCode: Codable {
     func execute() throws -> Character? {
         while !halted {
             if let output = try step() { return output }
-            if nextInstruction.opcode == .in && inputs.isEmpty {
+            if nextInstruction == .in && inputs.isEmpty {
                 return nil
             }
         }
@@ -209,7 +200,6 @@ class SynacorCode: Codable {
     }
 
     func trace() throws -> String {
-        let instruction = Instruction( instruction: memory[ip] )
         var line = String( format: "%04d: ", ip )
 
         func pad() -> Void {
@@ -218,7 +208,7 @@ class SynacorCode: Codable {
             line.append( String( repeating: " ", count: column - line.count ) )
         }
 
-        switch instruction.opcode {
+        switch nextInstruction {
         case .halt:
             line.append( "halt" )
         case .set:
