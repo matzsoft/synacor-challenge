@@ -19,7 +19,6 @@ let initialMemory = rawData.withUnsafeBytes { ( bufferPointer: UnsafeRawBufferPo
 }
 
 var computer = SynacorCode( memory: initialMemory )
-var savedComputer: SynacorCode?
 var outBuffer = ""
 
 while true {
@@ -35,25 +34,21 @@ while true {
             let line = readLine( strippingNewline: false )!
             switch line {
             case "save\n":
-                savedComputer = SynacorCode( from: computer )
-                computer.inputs = "look\n".map { UInt16( $0.asciiValue! ) }
+                let encoder = JSONEncoder()
+                let json = try encoder.encode( computer )
+                
+                try json.write( to: URL( fileURLWithPath: "challenge.json" ) )
+                computer.inputs = "look\n"
             case "restore\n":
-                if let savedComputer = savedComputer {
-                    computer = SynacorCode( from: savedComputer )
-                } else {
-                    print( "You have not saved yet!" )
-                }
-                computer.inputs = "look\n".map { UInt16( $0.asciiValue! ) }
+                let decoder = JSONDecoder()
+                let json = try Data( contentsOf: URL( fileURLWithPath: "challenge.json" ) )
+                
+                computer = try decoder.decode( SynacorCode.self, from: json )
+                computer.inputs = "look\n"
             default:
-                computer.inputs = line.map { UInt16( $0.asciiValue! ) }
+                computer.inputs = line
             }
         }
-    }
-    
-    guard let savedComputer = savedComputer else {
-        print( "Computer halted.  You must have died... Restarting!" )
-        computer = SynacorCode( memory: initialMemory )
-        continue
     }
     
     LOOP:
@@ -62,8 +57,11 @@ while true {
         guard let command = readLine() else { break }
         switch command {
         case "restore":
-            computer = SynacorCode( from: savedComputer )
-            computer.inputs = "look\n".map { UInt16( $0.asciiValue! ) }
+            let decoder = JSONDecoder()
+            let json = try Data( contentsOf: URL( fileURLWithPath: "challenge.json" ) )
+            
+            computer = try decoder.decode( SynacorCode.self, from: json )
+            computer.inputs = "look\n"
             break LOOP
         case "restart":
             computer = SynacorCode( memory: initialMemory )

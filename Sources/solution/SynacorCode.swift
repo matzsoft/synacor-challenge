@@ -26,7 +26,7 @@ class SynacorCode: Codable {
     var registers: [UInt16]
     var stack:     [UInt16]
     var memory:    [UInt16]
-    var inputs:    [UInt16]
+    var inputs:    String
     var halted:    Bool
     var debug:     Bool
     
@@ -39,7 +39,7 @@ class SynacorCode: Codable {
         self.registers = Array( repeating: UInt16( 0 ), count: 8 )
         self.stack     = []
         self.memory    = memory
-        self.inputs    = []
+        self.inputs    = ""
         halted         = false
         debug          = false
     }
@@ -160,12 +160,12 @@ class SynacorCode: Codable {
                 halted = true
             }
         case .out:
-            let output = try fetch( operandNumber: 1 )
+            let output = Character( UnicodeScalar( try fetch( operandNumber: 1 ) )! )
             ip += 2
-            return Character( UnicodeScalar( output )! )
+            return output
         case .in:
             if inputs.isEmpty { return nil }
-            try store( operandNumber: 1, value: inputs.removeFirst() )
+            try store( operandNumber: 1, value: UInt16( inputs.removeFirst().asciiValue! ) )
             ip += 2
         case .noop:
             ip += 1
@@ -184,162 +184,255 @@ class SynacorCode: Codable {
         return nil
     }
 
-//    func operandDescription( _ instruction: Instruction, operand: Int ) -> String {
-//        let location = memory[ ip + operand ]
-//        
-//        switch instruction.mode( operand: operand ) {
-//        case .position:
-//            return "@\(location)"
-//        case .immediate:
-//            return "\(location)"
-//        case .relative:
-//            return "*\(location)"
-//        }
-//    }
-//    
-//    func storeLocation( _ instruction: Instruction, operand: Int ) throws -> Int {
-//        var location = memory[ ip + operand ]
-//        
-//        switch instruction.mode( operand: operand ) {
-//        case .position:
-//            break
-//        case .immediate:
-//            throw RuntimeError( "Immediate mode invalid for address \(ip)" )
-//        case .relative:
-//            location += relativeBase
-//        }
-//
-//        if location < 0 {
-//            throw RuntimeError( "Negative memory store (\(location)) at address \(ip)" )
-//        }
-//        
-//        return location
-//    }
-//
-//    func trace() throws -> String {
-//        let instruction = Instruction( instruction: memory[ip] )
-//        var line = String( format: "%04d: ", ip )
-//        
-//        func pad() -> Void {
-//            let column = 35
-//            guard line.count < column else { return }
-//            line.append( String( repeating: " ", count: column - line.count ) )
-//        }
-//        
-//        switch instruction.opcode {
-//        case .add:
-//            let operand1 = try fetch( instruction, operand: 1 )
-//            let operand2 = try fetch( instruction, operand: 2 )
-//            
-//            line.append( "add " )
-//            line.append( "\(operandDescription( instruction, operand: 1 ) ), " )
-//            line.append( "\(operandDescription( instruction, operand: 2 ) ), " )
-//            line.append( operandDescription( instruction, operand: 3 ) )
-//            pad()
-//            line.append( "\(operand1) + \(operand2) = \(operand1 + operand2) -> " )
-//            line.append( "\( try storeLocation( instruction, operand: 3 ) )" )
-//        case .multiply:
-//            let operand1 = try fetch( instruction, operand: 1 )
-//            let operand2 = try fetch( instruction, operand: 2 )
-//            
-//            line.append( "multiply " )
-//            line.append( "\(operandDescription( instruction, operand: 1 ) ), " )
-//            line.append( "\(operandDescription( instruction, operand: 2 ) ), " )
-//            line.append( operandDescription( instruction, operand: 3 ) )
-//            pad()
-//            line.append( "\(operand1) * \(operand2) = \(operand1 * operand2) -> " )
-//            line.append( "\( try storeLocation( instruction, operand: 3 ) )" )
-//        case .input:
-//            let value = inputs.first!
-//            line.append( "input " )
-//            line.append( operandDescription( instruction, operand: 1 ) )
-//            pad()
-//            line.append( "input \(value)" )
-//            if 0 < value && value < 256 {
-//                if let code = UnicodeScalar( value ) {
-//                    let char = Character( code )
-//                    
-//                    if char.isASCII {
-//                        if char != "\n" {
-//                            line.append( " \"\(char)\"" )
-//                        } else {
-//                            line.append( " \"\\n\"" )
-//                        }
-//                    }
-//                }
-//            }
-//            line.append( " -> \( try storeLocation( instruction, operand: 1 ) )" )
-//        case .output:
-//            let operand1 = try fetch( instruction, operand: 1 )
-//            
-//            line.append( "output " )
-//            line.append( operandDescription( instruction, operand: 1 ) )
-//            pad()
-//            line.append( "output \(operand1)" )
-//            if 0 < operand1 && operand1 < 256 {
-//                if let code = UnicodeScalar( operand1 ) {
-//                    let char = Character( code )
-//                    
-//                    if char.isASCII {
-//                        if char != "\n" {
-//                            line.append( " \"\(char)\"" )
-//                        } else {
-//                            line.append( " \"\\n\"" )
-//                        }
-//                    }
-//                }
-//            }
-//        case .jumpIfTrue:
-//            let operand1 = try fetch( instruction, operand: 1 )
-//            let operand2 = try fetch( instruction, operand: 2 )
-//            
-//            line.append( "jumpIfTrue " )
-//            line.append( "\(operandDescription( instruction, operand: 1 ) ), " )
-//            line.append( operandDescription( instruction, operand: 2 ) )
-//            pad()
-//            line.append( "jumpIfTrue \(operand1), \(operand2)" )
-//        case .jumpIfFalse:
-//            let operand1 = try fetch( instruction, operand: 1 )
-//            let operand2 = try fetch( instruction, operand: 2 )
-//            
-//            line.append( "jumpIfFalse " )
-//            line.append( "\(operandDescription( instruction, operand: 1 ) ), " )
-//            line.append( operandDescription( instruction, operand: 2 ) )
-//            pad()
-//            line.append( "jumpIfFalse \(operand1), \(operand2)" )
-//        case .lessThan:
-//            let operand1 = try fetch( instruction, operand: 1 )
-//            let operand2 = try fetch( instruction, operand: 2 )
-//            
-//            line.append( "lessThan " )
-//            line.append( "\(operandDescription( instruction, operand: 1 ) ), " )
-//            line.append( "\(operandDescription( instruction, operand: 2 ) ), " )
-//            line.append( operandDescription( instruction, operand: 3 ) )
-//            pad()
-//            line.append( "\(operand1) < \(operand2) => \( operand1 < operand2 ? 1 : 0 ) -> " )
-//            line.append( "\( try storeLocation( instruction, operand: 3 ) )" )
-//        case .equals:
-//            let operand1 = try fetch( instruction, operand: 1 )
-//            let operand2 = try fetch( instruction, operand: 2 )
-//            
-//            line.append( "equals " )
-//            line.append( "\(operandDescription( instruction, operand: 1 ) ), " )
-//            line.append( "\(operandDescription( instruction, operand: 2 ) ), " )
-//            line.append( operandDescription( instruction, operand: 3 ) )
-//            pad()
-//            line.append( "\(operand1) == \(operand2) => \( operand1 == operand2 ? 1 : 0 ) -> " )
-//            line.append( "\( try storeLocation( instruction, operand: 3 ) )" )
-//        case .relativeBaseOffset:
-//            let operand1 = try fetch( instruction, operand: 1 )
-//            
-//            line.append( "relativeBaseOffset " )
-//            line.append( operandDescription( instruction, operand: 1 ) )
-//            pad()
-//            line.append( "relativeBase = \( relativeBase + operand1 )" )
-//        case .halt:
-//            line.append( "halt" )
-//        }
-//
-//        return line
-//    }
+    func operandDescription( operandNumber: Int ) throws -> String {
+        let operand = memory[ ip + operandNumber ]
+        
+        if operand > 32775 {
+            throw RuntimeError( "Operand \(operandNumber) (\(operand)) is to large at ip \(ip)" )
+        } else if operand > 32767 {
+            return "r" + String( operand - 32768 )
+        } else {
+            return String( operand )
+        }
+    }
+
+    func storeLocation( operandNumber: Int ) throws -> String {
+        let operand = memory[ ip + operandNumber ]
+        
+        if operand > 32775 {
+            throw RuntimeError( "Operand \(operandNumber) (\(operand)) is to large at ip \(ip)" )
+        } else if operand > 32767 {
+            return "r" + String( operand - 32768 )
+        } else {
+            throw RuntimeError( "Operand \(operandNumber) (\(operand)) not a register at ip \(ip)" )
+        }
+    }
+
+    func trace() throws -> String {
+        let instruction = Instruction( instruction: memory[ip] )
+        var line = String( format: "%04d: ", ip )
+
+        func pad() -> Void {
+            let column = 35
+            guard line.count < column else { return }
+            line.append( String( repeating: " ", count: column - line.count ) )
+        }
+
+        switch instruction.opcode {
+        case .halt:
+            line.append( "halt" )
+        case .set:
+            let oldValue = try fetch( operandNumber: 1 )
+            let newValue = try fetch( operandNumber: 2 )
+
+            line.append( "set " )
+            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 2 ) )" )
+            pad()
+            line.append( "\( try storeLocation( operandNumber: 1 ) ) = \(newValue) replacing \(oldValue)" )
+        case .push:
+            let newValue = try fetch( operandNumber: 1 )
+
+            line.append( "push " )
+            line.append( "\( try operandDescription( operandNumber: 1 ) )" )
+            pad()
+            line.append( "push \(newValue)" )
+        case .pop:
+            let oldValue = try fetch( operandNumber: 1 )
+            let newValue = stack.isEmpty ? "** Error **" : String( stack.last! )
+
+            line.append( "pop " )
+            line.append( "\( try storeLocation( operandNumber: 1 ) )" )
+            pad()
+            line.append( "\( try storeLocation( operandNumber: 1 ) ) = \(newValue) replacing \(oldValue)" )
+        case .eq:
+            let oldValue = try fetch( operandNumber: 1 )
+            let left = try fetch( operandNumber: 2 )
+            let right = try fetch( operandNumber: 3 )
+            let newValue = left == right ? 1 : 0
+
+            line.append( "eq " )
+            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 2 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 3 ) )" )
+            pad()
+            line.append( "\( try storeLocation( operandNumber: 1 ) ) = \(left) == \(right) " )
+            line.append( "replacing \(oldValue) with \(newValue)" )
+        case .gt:
+            let oldValue = try fetch( operandNumber: 1 )
+            let left = try fetch( operandNumber: 2 )
+            let right = try fetch( operandNumber: 3 )
+            let newValue = left > right ? 1 : 0
+
+            line.append( "gt " )
+            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 2 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 3 ) )" )
+            pad()
+            line.append( "\( try storeLocation( operandNumber: 1 ) ) = \(left) > \(right) " )
+            line.append( "replacing \(oldValue) with \(newValue)" )
+        case .jmp:
+            let destination = try fetch( operandNumber: 1 )
+
+            line.append( "jmp " )
+            line.append( "\( try operandDescription( operandNumber: 1 ) )" )
+            pad()
+            line.append( "ip = \(destination)" )
+        case .jt:
+            let boolean = try fetch( operandNumber: 1 )
+            let destination = try fetch( operandNumber: 2 )
+
+            line.append( "jt " )
+            line.append( "\( try operandDescription( operandNumber: 1 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 2 ) )" )
+            pad()
+            line.append( "if \(boolean) then ip = \(destination) " )
+            line.append( boolean != 0 ? "(jmp)" : "(noop)" )
+        case .jf:
+            let boolean = try fetch( operandNumber: 1 )
+            let destination = try fetch( operandNumber: 2 )
+
+            line.append( "jf " )
+            line.append( "\( try operandDescription( operandNumber: 1 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 2 ) )" )
+            pad()
+            line.append( "if not \(boolean) then ip = \(destination) " )
+            line.append( boolean == 0 ? "(jmp)" : "(noop)" )
+        case .add:
+            let oldValue = try fetch( operandNumber: 1 )
+            let left = Int( try fetch( operandNumber: 2 ) )
+            let right = Int( try fetch( operandNumber: 3 ) )
+            let newValue = ( left + right ) & 32767
+
+            line.append( "add " )
+            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 2 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 3 ) )" )
+            pad()
+            line.append( "\( try storeLocation( operandNumber: 1 ) ) = \(left) + \(right) " )
+            line.append( "replacing \(oldValue) with \(newValue)" )
+        case .mult:
+            let oldValue = try fetch( operandNumber: 1 )
+            let left = Int( try fetch( operandNumber: 2 ) )
+            let right = Int( try fetch( operandNumber: 3 ) )
+            let newValue = ( left * right ) & 32767
+
+            line.append( "mult " )
+            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 2 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 3 ) )" )
+            pad()
+            line.append( "\( try storeLocation( operandNumber: 1 ) ) = \(left) * \(right) " )
+            line.append( "replacing \(oldValue) with \(newValue)" )
+        case .mod:
+            let oldValue = try fetch( operandNumber: 1 )
+            let left = try fetch( operandNumber: 2 )
+            let right = try fetch( operandNumber: 3 )
+            let newValue = left % right
+
+            line.append( "mod " )
+            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 2 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 3 ) )" )
+            pad()
+            line.append( "\( try storeLocation( operandNumber: 1 ) ) = \(left) % \(right) " )
+            line.append( "replacing \(oldValue) with \(newValue)" )
+        case .and:
+            let oldValue = try fetch( operandNumber: 1 )
+            let left = try fetch( operandNumber: 2 )
+            let right = try fetch( operandNumber: 3 )
+            let newValue = left & right
+
+            line.append( "and " )
+            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 2 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 3 ) )" )
+            pad()
+            line.append( "\( try storeLocation( operandNumber: 1 ) ) = \(left) & \(right) " )
+            line.append( "replacing \(oldValue) with \(newValue)" )
+        case .or:
+            let oldValue = try fetch( operandNumber: 1 )
+            let left = try fetch( operandNumber: 2 )
+            let right = try fetch( operandNumber: 3 )
+            let newValue = left | right
+
+            line.append( "or " )
+            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 2 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 3 ) )" )
+            pad()
+            line.append( "\( try storeLocation( operandNumber: 1 ) ) = \(left) | \(right) " )
+            line.append( "replacing \(oldValue) with \(newValue)" )
+        case .not:
+            let oldValue = try fetch( operandNumber: 1 )
+            let value = try fetch( operandNumber: 2 )
+            let newValue = ~value & 32767
+
+            line.append( "not " )
+            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 2 ) )" )
+            pad()
+            line.append( "\( try storeLocation( operandNumber: 1 ) ) = ~\(value) " )
+            line.append( "replacing \(oldValue) with \(newValue)" )
+        case .rmem:
+            let oldValue = try fetch( operandNumber: 1 )
+            let address = try Int( fetch( operandNumber: 2 ) )
+            let newValue = memory[address]
+
+            line.append( "rmem " )
+            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 2 ) )" )
+            pad()
+            line.append( "\( try storeLocation( operandNumber: 1 ) ) = memory[\(address)] " )
+            line.append( "replacing \(oldValue) with \(newValue)" )
+        case .wmem:
+            let address = try Int( fetch( operandNumber: 1 ) )
+            let oldValue = memory[address]
+            let newValue = try Int( fetch( operandNumber: 2 ) )
+
+            line.append( "wmem " )
+            line.append( "\( try operandDescription( operandNumber: 1 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 2 ) )" )
+            pad()
+            line.append( "memory[\(address)] = \(newValue) replacing \(oldValue)" )
+        case .call:
+            let destination = try fetch( operandNumber: 1 )
+
+            line.append( "call " )
+            line.append( "\( try operandDescription( operandNumber: 1 ) )" )
+            pad()
+            line.append( "push \(ip+2); ip = \(destination)" )
+        case .ret:
+            line.append( "ret" )
+            pad()
+            line.append( stack.isEmpty ? "halt" : "ip = \(stack.last!)" )
+        case .out:
+            let code = try fetch( operandNumber: 1 )
+            let output = Character( UnicodeScalar( code )! )
+
+            line.append( "out " )
+            line.append( "\( try operandDescription( operandNumber: 1 ) )" )
+            pad()
+            line.append( "output \(code) or ASCII \"\(output)\"" )
+        case .in:
+            line.append( "pop " )
+            line.append( "\( try storeLocation( operandNumber: 1 ) )" )
+            pad()
+
+            if inputs.isEmpty {
+                line.append( "** Blocks waiting for input **" )
+            } else {
+                let oldValue = try fetch( operandNumber: 1 )
+                let character = inputs.removeFirst()
+                let newValue = UInt16( character.asciiValue! )
+                
+                line.append( "\( try storeLocation( operandNumber: 1 ) ) = \(newValue) " )
+                line.append( "or ASCII \"\(character)\" replacing \(oldValue)" )
+            }
+        case .noop:
+            line.append( "noop" )
+        }
+
+        return line
+    }
 }
