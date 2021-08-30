@@ -130,10 +130,27 @@ struct Game {
         case "restart":
             computer = try Game.initialComputer( from: fileURL )
         case "trace":
-            trace = !trace
+            if words.count == 1 {
+                trace = !trace
+            } else {
+                switch words[1] {
+                case "on":
+                    trace = true
+                case "off":
+                    trace = false
+                case "clear":
+                    traceBuffer = []
+                default:
+                    try traceBuffer.joined( separator: "\n" ).write(
+                        toFile: "\(words[1]).trace", atomically: true, encoding: .utf8 )
+                }
+            }
             print( "Trace mode is now \( trace ? "on" : "off" )." )
             print( prompt )
         case "r7":
+            if words.count > 1 {
+                computer.registers[7] = UInt16( words[1] )!
+            }
             print( "The eighth register is \( computer.registers[7] )." )
             print( prompt )
         case "die":

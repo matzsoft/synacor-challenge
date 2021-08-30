@@ -405,7 +405,7 @@ class SynacorCode: Codable {
             pad()
             line.append( "output \(code) or ASCII \"\(output)\"" )
         case .in:
-            line.append( "pop " )
+            line.append( "in " )
             line.append( "\( try storeLocation( operandNumber: 1 ) )" )
             pad()
 
@@ -413,7 +413,7 @@ class SynacorCode: Codable {
                 line.append( "** Blocks waiting for input **" )
             } else {
                 let oldValue = try fetch( operandNumber: 1 )
-                let character = inputs.removeFirst()
+                let character = inputs.first!
                 let newValue = UInt16( character.asciiValue! )
                 
                 line.append( "\( try storeLocation( operandNumber: 1 ) ) = \(newValue) " )
@@ -425,4 +425,121 @@ class SynacorCode: Codable {
 
         return line
     }
+    
+    func disassemble( address: Int ) throws -> String {
+        var line = String( format: "%04d: ", ip )
+
+        switch nextInstruction {
+        case .halt:
+            line.append( "halt" )
+        case .set:
+            line.append( "set " )
+            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 2 ) )" )
+        case .push:
+            line.append( "push " )
+            line.append( "\( try operandDescription( operandNumber: 1 ) )" )
+        case .pop:
+            line.append( "pop " )
+            line.append( "\( try storeLocation( operandNumber: 1 ) )" )
+        case .eq:
+            line.append( "eq " )
+            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 2 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 3 ) )" )
+        case .gt:
+            line.append( "gt " )
+            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 2 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 3 ) )" )
+        case .jmp:
+            line.append( "jmp " )
+            line.append( "\( try operandDescription( operandNumber: 1 ) )" )
+        case .jt:
+            line.append( "jt " )
+            line.append( "\( try operandDescription( operandNumber: 1 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 2 ) )" )
+        case .jf:
+            line.append( "jf " )
+            line.append( "\( try operandDescription( operandNumber: 1 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 2 ) )" )
+        case .add:
+            line.append( "add " )
+            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 2 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 3 ) )" )
+        case .mult:
+            line.append( "mult " )
+            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 2 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 3 ) )" )
+        case .mod:
+            line.append( "mod " )
+            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 2 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 3 ) )" )
+        case .and:
+            line.append( "and " )
+            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 2 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 3 ) )" )
+        case .or:
+            line.append( "or " )
+            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 2 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 3 ) )" )
+        case .not:
+            line.append( "not " )
+            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 2 ) )" )
+        case .rmem:
+            line.append( "rmem " )
+            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 2 ) )" )
+        case .wmem:
+            line.append( "wmem " )
+            line.append( "\( try operandDescription( operandNumber: 1 ) ), " )
+            line.append( "\( try operandDescription( operandNumber: 2 ) )" )
+        case .call:
+            line.append( "call " )
+            line.append( "\( try operandDescription( operandNumber: 1 ) )" )
+        case .ret:
+            line.append( "ret" )
+        case .out:
+            line.append( "out " )
+            line.append( "\( try operandDescription( operandNumber: 1 ) )" )
+        case .in:
+            line.append( "in " )
+            line.append( "\( try storeLocation( operandNumber: 1 ) )" )
+        case .noop:
+            line.append( "noop" )
+        }
+
+        return line
+    }
 }
+
+
+
+// case halt:
+// case set:
+// case push:
+// case pop:
+// case eq:
+// case gt:
+// case jmp:
+// case jt:
+// case jf:
+// case add:
+// case mult:
+// case mod:
+// case and:
+// case or:
+// case not:
+// case rmem:
+// case wmem:
+// case call:
+// case ret:
+// case out:
+// case in:
+// case noop:
