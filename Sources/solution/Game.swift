@@ -8,6 +8,7 @@
 import Foundation
 
 struct Game {
+    let fileURL:     URL
     var computer:    SynacorCode
     var runQuiet:    Bool
     var inputQueue:  [String]
@@ -16,8 +17,24 @@ struct Game {
     
     var isHalted:    Bool { computer.halted }
     
-    init( memory: [UInt16] ) {
-        computer    = SynacorCode( memory: memory )
+    static func initialComputer( from url: URL ) throws -> SynacorCode {
+        let size = MemoryLayout<UInt16>.stride
+        let rawData = try Data( contentsOf: url )
+        let initialMemory = rawData.withUnsafeBytes { ( bufferPointer: UnsafeRawBufferPointer ) -> [UInt16] in
+            guard let baseAddress = bufferPointer.baseAddress, bufferPointer.count > 0 else {
+                return [UInt16]()
+            }
+            return stride( from: baseAddress, to: baseAddress + bufferPointer.count, by: size ).map {
+                $0.load( as: UInt16.self )
+            }
+        }
+
+        return SynacorCode( memory: initialMemory )
+    }
+    
+    init( from url: URL ) throws {
+        fileURL     = url
+        computer    = try Game.initialComputer( from: url )
         runQuiet    = false
         inputQueue  = []
         trace       = false
@@ -25,6 +42,7 @@ struct Game {
     }
     
     init( from other: Game ) {
+        fileURL     = other.fileURL
         computer    = SynacorCode( from: other.computer )
         runQuiet    = other.runQuiet
         inputQueue  = other.inputQueue
@@ -75,9 +93,7 @@ struct Game {
 
             if computer.inputs.isEmpty {
                 if inputQueue.isEmpty {
-                    let line = readLine( strippingNewline: true ) ?? ""
-                    
-                    command( value: line )
+                    try getCommand()
                 } else {
                     let line = inputQueue.removeFirst()
                     
@@ -85,6 +101,46 @@ struct Game {
                     print( line )
                 }
             }
+        }
+    }
+    
+    mutating func getCommand() throws -> Void {
+        let prompt = "What do you do?"
+        let line = readLine() ?? ""
+        let words = line.split( separator: " " )
+        
+        guard !words.isEmpty else {
+            command( value: "help" )
+            return
+        }
+        
+        switch words[0] {
+        case "save":
+            let encoder = JSONEncoder()
+            let json = try encoder.encode( computer )
+            
+            try json.write( to: URL( fileURLWithPath: "challenge.json" ) )
+            print( prompt )
+        case "restore":
+            let decoder = JSONDecoder()
+            let json = try Data( contentsOf: URL( fileURLWithPath: "challenge.json" ) )
+            
+            computer = try decoder.decode( SynacorCode.self, from: json )
+            command( value: "look" )
+        case "restart":
+            computer = try Game.initialComputer( from: fileURL )
+        case "trace":
+            trace = !trace
+            print( "Trace mode is now \( trace ? "on" : "off" )." )
+            print( prompt )
+        case "r7":
+            print( "The eighth register is \( computer.registers[7] )." )
+            print( prompt )
+        case "die":
+            print( "You do your best grue mating call and are soon eaten by a pack of angry grues." )
+            computer.halted = true
+        default:
+            command( value: line )
         }
     }
 }

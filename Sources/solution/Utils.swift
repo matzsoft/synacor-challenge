@@ -18,3 +18,21 @@ struct RuntimeError: Error {
         return message
     }
 }
+
+
+func switchToDirectory( containing filename: String ) throws -> Void {
+    let fileManager = FileManager.default
+    var directory = URL( fileURLWithPath: #file ).deletingLastPathComponent()
+
+    while directory != URL( fileURLWithPath: "/" ) {
+        let file = directory.appendingPathComponent( filename ).path
+        if fileManager.isReadableFile( atPath: file ) {
+            fileManager.changeCurrentDirectoryPath( directory.path )
+            return
+        }
+        
+        directory = directory.deletingLastPathComponent()
+    }
+
+    throw RuntimeError( "Can't find directory containing \(binFileName)!" )
+}
