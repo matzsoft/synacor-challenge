@@ -200,7 +200,7 @@ class SynacorCode: Codable {
     }
 
     func trace() throws -> String {
-        var line = String( format: "%04d: ", ip )
+        var line = try disassemble( address: ip )
 
         func pad() -> Void {
             let column = 35
@@ -210,29 +210,22 @@ class SynacorCode: Codable {
 
         switch nextInstruction {
         case .halt:
-            line.append( "halt" )
+            break
         case .set:
             let oldValue = try fetch( operandNumber: 1 )
             let newValue = try fetch( operandNumber: 2 )
 
-            line.append( "set " )
-            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 2 ) )" )
             pad()
             line.append( "\( try storeLocation( operandNumber: 1 ) ) = \(newValue) replacing \(oldValue)" )
         case .push:
             let newValue = try fetch( operandNumber: 1 )
 
-            line.append( "push " )
-            line.append( "\( try operandDescription( operandNumber: 1 ) )" )
             pad()
             line.append( "push \(newValue)" )
         case .pop:
             let oldValue = try fetch( operandNumber: 1 )
             let newValue = stack.isEmpty ? "** Error **" : String( stack.last! )
 
-            line.append( "pop " )
-            line.append( "\( try storeLocation( operandNumber: 1 ) )" )
             pad()
             line.append( "\( try storeLocation( operandNumber: 1 ) ) = \(newValue) replacing \(oldValue)" )
         case .eq:
@@ -241,10 +234,6 @@ class SynacorCode: Codable {
             let right = try fetch( operandNumber: 3 )
             let newValue = left == right ? 1 : 0
 
-            line.append( "eq " )
-            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 2 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 3 ) )" )
             pad()
             line.append( "\( try storeLocation( operandNumber: 1 ) ) = \(left) == \(right) " )
             line.append( "replacing \(oldValue) with \(newValue)" )
@@ -254,27 +243,18 @@ class SynacorCode: Codable {
             let right = try fetch( operandNumber: 3 )
             let newValue = left > right ? 1 : 0
 
-            line.append( "gt " )
-            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 2 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 3 ) )" )
             pad()
             line.append( "\( try storeLocation( operandNumber: 1 ) ) = \(left) > \(right) " )
             line.append( "replacing \(oldValue) with \(newValue)" )
         case .jmp:
             let destination = try fetch( operandNumber: 1 )
 
-            line.append( "jmp " )
-            line.append( "\( try operandDescription( operandNumber: 1 ) )" )
             pad()
             line.append( "ip = \(destination)" )
         case .jt:
             let boolean = try fetch( operandNumber: 1 )
             let destination = try fetch( operandNumber: 2 )
 
-            line.append( "jt " )
-            line.append( "\( try operandDescription( operandNumber: 1 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 2 ) )" )
             pad()
             line.append( "if \(boolean) then ip = \(destination) " )
             line.append( boolean != 0 ? "(jmp)" : "(noop)" )
@@ -282,9 +262,6 @@ class SynacorCode: Codable {
             let boolean = try fetch( operandNumber: 1 )
             let destination = try fetch( operandNumber: 2 )
 
-            line.append( "jf " )
-            line.append( "\( try operandDescription( operandNumber: 1 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 2 ) )" )
             pad()
             line.append( "if not \(boolean) then ip = \(destination) " )
             line.append( boolean == 0 ? "(jmp)" : "(noop)" )
@@ -294,10 +271,6 @@ class SynacorCode: Codable {
             let right = Int( try fetch( operandNumber: 3 ) )
             let newValue = ( left + right ) & 32767
 
-            line.append( "add " )
-            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 2 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 3 ) )" )
             pad()
             line.append( "\( try storeLocation( operandNumber: 1 ) ) = \(left) + \(right) " )
             line.append( "replacing \(oldValue) with \(newValue)" )
@@ -307,10 +280,6 @@ class SynacorCode: Codable {
             let right = Int( try fetch( operandNumber: 3 ) )
             let newValue = ( left * right ) & 32767
 
-            line.append( "mult " )
-            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 2 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 3 ) )" )
             pad()
             line.append( "\( try storeLocation( operandNumber: 1 ) ) = \(left) * \(right) " )
             line.append( "replacing \(oldValue) with \(newValue)" )
@@ -320,10 +289,6 @@ class SynacorCode: Codable {
             let right = try fetch( operandNumber: 3 )
             let newValue = left % right
 
-            line.append( "mod " )
-            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 2 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 3 ) )" )
             pad()
             line.append( "\( try storeLocation( operandNumber: 1 ) ) = \(left) % \(right) " )
             line.append( "replacing \(oldValue) with \(newValue)" )
@@ -333,10 +298,6 @@ class SynacorCode: Codable {
             let right = try fetch( operandNumber: 3 )
             let newValue = left & right
 
-            line.append( "and " )
-            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 2 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 3 ) )" )
             pad()
             line.append( "\( try storeLocation( operandNumber: 1 ) ) = \(left) & \(right) " )
             line.append( "replacing \(oldValue) with \(newValue)" )
@@ -346,10 +307,6 @@ class SynacorCode: Codable {
             let right = try fetch( operandNumber: 3 )
             let newValue = left | right
 
-            line.append( "or " )
-            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 2 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 3 ) )" )
             pad()
             line.append( "\( try storeLocation( operandNumber: 1 ) ) = \(left) | \(right) " )
             line.append( "replacing \(oldValue) with \(newValue)" )
@@ -358,9 +315,6 @@ class SynacorCode: Codable {
             let value = try fetch( operandNumber: 2 )
             let newValue = ~value & 32767
 
-            line.append( "not " )
-            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 2 ) )" )
             pad()
             line.append( "\( try storeLocation( operandNumber: 1 ) ) = ~\(value) " )
             line.append( "replacing \(oldValue) with \(newValue)" )
@@ -369,9 +323,6 @@ class SynacorCode: Codable {
             let address = try Int( fetch( operandNumber: 2 ) )
             let newValue = memory[address]
 
-            line.append( "rmem " )
-            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 2 ) )" )
             pad()
             line.append( "\( try storeLocation( operandNumber: 1 ) ) = memory[\(address)] " )
             line.append( "replacing \(oldValue) with \(newValue)" )
@@ -380,33 +331,23 @@ class SynacorCode: Codable {
             let oldValue = memory[address]
             let newValue = try Int( fetch( operandNumber: 2 ) )
 
-            line.append( "wmem " )
-            line.append( "\( try operandDescription( operandNumber: 1 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 2 ) )" )
             pad()
             line.append( "memory[\(address)] = \(newValue) replacing \(oldValue)" )
         case .call:
             let destination = try fetch( operandNumber: 1 )
 
-            line.append( "call " )
-            line.append( "\( try operandDescription( operandNumber: 1 ) )" )
             pad()
             line.append( "push \(ip+2); ip = \(destination)" )
         case .ret:
-            line.append( "ret" )
             pad()
             line.append( stack.isEmpty ? "halt" : "ip = \(stack.last!)" )
         case .out:
             let code = try fetch( operandNumber: 1 )
             let output = Character( UnicodeScalar( code )! )
 
-            line.append( "out " )
-            line.append( "\( try operandDescription( operandNumber: 1 ) )" )
             pad()
             line.append( "output \(code) or ASCII \"\(output)\"" )
         case .in:
-            line.append( "in " )
-            line.append( "\( try storeLocation( operandNumber: 1 ) )" )
             pad()
 
             if inputs.isEmpty {
@@ -420,7 +361,7 @@ class SynacorCode: Codable {
                 line.append( "or ASCII \"\(character)\" replacing \(oldValue)" )
             }
         case .noop:
-            line.append( "noop" )
+            break
         }
 
         return line
@@ -429,7 +370,7 @@ class SynacorCode: Codable {
     func disassemble( address: Int ) throws -> String {
         var line = String( format: "%04d: ", ip )
 
-        switch nextInstruction {
+        switch Opcode( rawValue: memory[address] ) {
         case .halt:
             line.append( "halt" )
         case .set:
@@ -513,6 +454,8 @@ class SynacorCode: Codable {
             line.append( "\( try storeLocation( operandNumber: 1 ) )" )
         case .noop:
             line.append( "noop" )
+        case nil:
+            throw RuntimeError( "Invalid opcode \(memory[address]) at address \(address)." )
         }
 
         return line
