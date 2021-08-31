@@ -153,6 +153,13 @@ struct Game {
             }
             print( "The eighth register is \( computer.registers[7] )." )
             print( prompt )
+        case "disassemble":
+            let start = words.count < 2 ? 0 : Int( words[1] )!
+            let file = words.count < 3 ? "default.asm" : "\(words[2]).asm"
+            let results = try computer.disassembler( address: start ).joined( separator: "\n" )
+            
+            try results.write( toFile: file, atomically: true, encoding: .utf8 )
+            print( prompt )
         case "die":
             print( "You do your best grue mating call and are soon eaten by a pack of angry grues." )
             computer.halted = true

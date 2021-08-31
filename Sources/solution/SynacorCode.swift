@@ -175,8 +175,8 @@ class SynacorCode: Codable {
         return nil
     }
 
-    func operandDescription( operandNumber: Int ) throws -> String {
-        let operand = memory[ ip + operandNumber ]
+    func operandDescription( address: Int, operandNumber: Int ) throws -> String {
+        let operand = memory[ address + operandNumber ]
         
         if operand > 32775 {
             throw RuntimeError( "Operand \(operandNumber) (\(operand)) is to large at ip \(ip)" )
@@ -187,8 +187,8 @@ class SynacorCode: Codable {
         }
     }
 
-    func storeLocation( operandNumber: Int ) throws -> String {
-        let operand = memory[ ip + operandNumber ]
+    func storeLocation( address: Int, operandNumber: Int ) throws -> String {
+        let operand = memory[ address + operandNumber ]
         
         if operand > 32775 {
             throw RuntimeError( "Operand \(operandNumber) (\(operand)) is to large at ip \(ip)" )
@@ -216,7 +216,8 @@ class SynacorCode: Codable {
             let newValue = try fetch( operandNumber: 2 )
 
             pad()
-            line.append( "\( try storeLocation( operandNumber: 1 ) ) = \(newValue) replacing \(oldValue)" )
+            line.append( "\( try storeLocation( address: ip, operandNumber: 1 ) ) = " )
+            line.append( "\(newValue) replacing \(oldValue)" )
         case .push:
             let newValue = try fetch( operandNumber: 1 )
 
@@ -227,7 +228,8 @@ class SynacorCode: Codable {
             let newValue = stack.isEmpty ? "** Error **" : String( stack.last! )
 
             pad()
-            line.append( "\( try storeLocation( operandNumber: 1 ) ) = \(newValue) replacing \(oldValue)" )
+            line.append( "\( try storeLocation( address: ip, operandNumber: 1 ) ) = " )
+            line.append( "\(newValue) replacing \(oldValue)" )
         case .eq:
             let oldValue = try fetch( operandNumber: 1 )
             let left = try fetch( operandNumber: 2 )
@@ -235,7 +237,7 @@ class SynacorCode: Codable {
             let newValue = left == right ? 1 : 0
 
             pad()
-            line.append( "\( try storeLocation( operandNumber: 1 ) ) = \(left) == \(right) " )
+            line.append( "\( try storeLocation( address: ip, operandNumber: 1 ) ) = \(left) == \(right) " )
             line.append( "replacing \(oldValue) with \(newValue)" )
         case .gt:
             let oldValue = try fetch( operandNumber: 1 )
@@ -244,7 +246,7 @@ class SynacorCode: Codable {
             let newValue = left > right ? 1 : 0
 
             pad()
-            line.append( "\( try storeLocation( operandNumber: 1 ) ) = \(left) > \(right) " )
+            line.append( "\( try storeLocation( address: ip, operandNumber: 1 ) ) = \(left) > \(right) " )
             line.append( "replacing \(oldValue) with \(newValue)" )
         case .jmp:
             let destination = try fetch( operandNumber: 1 )
@@ -272,7 +274,7 @@ class SynacorCode: Codable {
             let newValue = ( left + right ) & 32767
 
             pad()
-            line.append( "\( try storeLocation( operandNumber: 1 ) ) = \(left) + \(right) " )
+            line.append( "\( try storeLocation( address: ip, operandNumber: 1 ) ) = \(left) + \(right) " )
             line.append( "replacing \(oldValue) with \(newValue)" )
         case .mult:
             let oldValue = try fetch( operandNumber: 1 )
@@ -281,7 +283,7 @@ class SynacorCode: Codable {
             let newValue = ( left * right ) & 32767
 
             pad()
-            line.append( "\( try storeLocation( operandNumber: 1 ) ) = \(left) * \(right) " )
+            line.append( "\( try storeLocation( address: ip, operandNumber: 1 ) ) = \(left) * \(right) " )
             line.append( "replacing \(oldValue) with \(newValue)" )
         case .mod:
             let oldValue = try fetch( operandNumber: 1 )
@@ -290,7 +292,7 @@ class SynacorCode: Codable {
             let newValue = left % right
 
             pad()
-            line.append( "\( try storeLocation( operandNumber: 1 ) ) = \(left) % \(right) " )
+            line.append( "\( try storeLocation( address: ip, operandNumber: 1 ) ) = \(left) % \(right) " )
             line.append( "replacing \(oldValue) with \(newValue)" )
         case .and:
             let oldValue = try fetch( operandNumber: 1 )
@@ -299,7 +301,7 @@ class SynacorCode: Codable {
             let newValue = left & right
 
             pad()
-            line.append( "\( try storeLocation( operandNumber: 1 ) ) = \(left) & \(right) " )
+            line.append( "\( try storeLocation( address: ip, operandNumber: 1 ) ) = \(left) & \(right) " )
             line.append( "replacing \(oldValue) with \(newValue)" )
         case .or:
             let oldValue = try fetch( operandNumber: 1 )
@@ -308,7 +310,7 @@ class SynacorCode: Codable {
             let newValue = left | right
 
             pad()
-            line.append( "\( try storeLocation( operandNumber: 1 ) ) = \(left) | \(right) " )
+            line.append( "\( try storeLocation( address: ip, operandNumber: 1 ) ) = \(left) | \(right) " )
             line.append( "replacing \(oldValue) with \(newValue)" )
         case .not:
             let oldValue = try fetch( operandNumber: 1 )
@@ -316,7 +318,7 @@ class SynacorCode: Codable {
             let newValue = ~value & 32767
 
             pad()
-            line.append( "\( try storeLocation( operandNumber: 1 ) ) = ~\(value) " )
+            line.append( "\( try storeLocation( address: ip, operandNumber: 1 ) ) = ~\(value) " )
             line.append( "replacing \(oldValue) with \(newValue)" )
         case .rmem:
             let oldValue = try fetch( operandNumber: 1 )
@@ -324,7 +326,7 @@ class SynacorCode: Codable {
             let newValue = memory[address]
 
             pad()
-            line.append( "\( try storeLocation( operandNumber: 1 ) ) = memory[\(address)] " )
+            line.append( "\( try storeLocation( address: ip, operandNumber: 1 ) ) = memory[\(address)] " )
             line.append( "replacing \(oldValue) with \(newValue)" )
         case .wmem:
             let address = try Int( fetch( operandNumber: 1 ) )
@@ -357,7 +359,7 @@ class SynacorCode: Codable {
                 let character = inputs.first!
                 let newValue = UInt16( character.asciiValue! )
                 
-                line.append( "\( try storeLocation( operandNumber: 1 ) ) = \(newValue) " )
+                line.append( "\( try storeLocation( address: ip, operandNumber: 1 ) ) = \(newValue) " )
                 line.append( "or ASCII \"\(character)\" replacing \(oldValue)" )
             }
         case .noop:
@@ -366,92 +368,92 @@ class SynacorCode: Codable {
 
         return line
     }
-    
+
     func disassemble( address: Int ) throws -> String {
-        var line = String( format: "%04d: ", ip )
+        var line = String( format: "%04d: ", address )
 
         switch Opcode( rawValue: memory[address] ) {
         case .halt:
             line.append( "halt" )
         case .set:
             line.append( "set " )
-            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 2 ) )" )
+            line.append( "\( try storeLocation( address: address, operandNumber: 1 ) ), " )
+            line.append( "\( try operandDescription( address: address, operandNumber: 2 ) )" )
         case .push:
             line.append( "push " )
-            line.append( "\( try operandDescription( operandNumber: 1 ) )" )
+            line.append( "\( try operandDescription( address: address, operandNumber: 1 ) )" )
         case .pop:
             line.append( "pop " )
-            line.append( "\( try storeLocation( operandNumber: 1 ) )" )
+            line.append( "\( try storeLocation( address: address, operandNumber: 1 ) )" )
         case .eq:
             line.append( "eq " )
-            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 2 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 3 ) )" )
+            line.append( "\( try storeLocation( address: address, operandNumber: 1 ) ), " )
+            line.append( "\( try operandDescription( address: address, operandNumber: 2 ) ), " )
+            line.append( "\( try operandDescription( address: address, operandNumber: 3 ) )" )
         case .gt:
             line.append( "gt " )
-            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 2 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 3 ) )" )
+            line.append( "\( try storeLocation( address: address, operandNumber: 1 ) ), " )
+            line.append( "\( try operandDescription( address: address, operandNumber: 2 ) ), " )
+            line.append( "\( try operandDescription( address: address, operandNumber: 3 ) )" )
         case .jmp:
             line.append( "jmp " )
-            line.append( "\( try operandDescription( operandNumber: 1 ) )" )
+            line.append( "\( try operandDescription( address: address, operandNumber: 1 ) )" )
         case .jt:
             line.append( "jt " )
-            line.append( "\( try operandDescription( operandNumber: 1 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 2 ) )" )
+            line.append( "\( try operandDescription( address: address, operandNumber: 1 ) ), " )
+            line.append( "\( try operandDescription( address: address, operandNumber: 2 ) )" )
         case .jf:
             line.append( "jf " )
-            line.append( "\( try operandDescription( operandNumber: 1 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 2 ) )" )
+            line.append( "\( try operandDescription( address: address, operandNumber: 1 ) ), " )
+            line.append( "\( try operandDescription( address: address, operandNumber: 2 ) )" )
         case .add:
             line.append( "add " )
-            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 2 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 3 ) )" )
+            line.append( "\( try storeLocation( address: address, operandNumber: 1 ) ), " )
+            line.append( "\( try operandDescription( address: address, operandNumber: 2 ) ), " )
+            line.append( "\( try operandDescription( address: address, operandNumber: 3 ) )" )
         case .mult:
             line.append( "mult " )
-            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 2 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 3 ) )" )
+            line.append( "\( try storeLocation( address: address, operandNumber: 1 ) ), " )
+            line.append( "\( try operandDescription( address: address, operandNumber: 2 ) ), " )
+            line.append( "\( try operandDescription( address: address, operandNumber: 3 ) )" )
         case .mod:
             line.append( "mod " )
-            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 2 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 3 ) )" )
+            line.append( "\( try storeLocation( address: address, operandNumber: 1 ) ), " )
+            line.append( "\( try operandDescription( address: address, operandNumber: 2 ) ), " )
+            line.append( "\( try operandDescription( address: address, operandNumber: 3 ) )" )
         case .and:
             line.append( "and " )
-            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 2 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 3 ) )" )
+            line.append( "\( try storeLocation( address: address, operandNumber: 1 ) ), " )
+            line.append( "\( try operandDescription( address: address, operandNumber: 2 ) ), " )
+            line.append( "\( try operandDescription( address: address, operandNumber: 3 ) )" )
         case .or:
             line.append( "or " )
-            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 2 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 3 ) )" )
+            line.append( "\( try storeLocation( address: address, operandNumber: 1 ) ), " )
+            line.append( "\( try operandDescription( address: address, operandNumber: 2 ) ), " )
+            line.append( "\( try operandDescription( address: address, operandNumber: 3 ) )" )
         case .not:
             line.append( "not " )
-            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 2 ) )" )
+            line.append( "\( try storeLocation( address: address, operandNumber: 1 ) ), " )
+            line.append( "\( try operandDescription( address: address, operandNumber: 2 ) )" )
         case .rmem:
             line.append( "rmem " )
-            line.append( "\( try storeLocation( operandNumber: 1 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 2 ) )" )
+            line.append( "\( try storeLocation( address: address, operandNumber: 1 ) ), " )
+            line.append( "\( try operandDescription( address: address, operandNumber: 2 ) )" )
         case .wmem:
             line.append( "wmem " )
-            line.append( "\( try operandDescription( operandNumber: 1 ) ), " )
-            line.append( "\( try operandDescription( operandNumber: 2 ) )" )
+            line.append( "\( try operandDescription( address: address, operandNumber: 1 ) ), " )
+            line.append( "\( try operandDescription( address: address, operandNumber: 2 ) )" )
         case .call:
             line.append( "call " )
-            line.append( "\( try operandDescription( operandNumber: 1 ) )" )
+            line.append( "\( try operandDescription( address: address, operandNumber: 1 ) )" )
         case .ret:
             line.append( "ret" )
         case .out:
             line.append( "out " )
-            line.append( "\( try operandDescription( operandNumber: 1 ) )" )
+            line.append( "\( try operandDescription( address: address, operandNumber: 1 ) )" )
         case .in:
             line.append( "in " )
-            line.append( "\( try storeLocation( operandNumber: 1 ) )" )
+            line.append( "\( try storeLocation( address: address, operandNumber: 1 ) )" )
         case .noop:
             line.append( "noop" )
         case nil:
@@ -459,6 +461,109 @@ class SynacorCode: Codable {
         }
 
         return line
+    }
+    
+    func immediateValue( address: Int, operandNumber: Int ) throws -> Int? {
+        let operand = memory[ address + operandNumber ]
+        
+        if operand > 32775 {
+            throw RuntimeError( "Operand \(operandNumber) (\(operand)) is to large at ip \(ip)" )
+        } else if operand > 32767 {
+            return nil
+        } else {
+            return Int( operand )
+        }
+    }
+
+    func disassembler( address: Int ) throws -> [String] {
+        var completed = [ Int : ( next: Int, description: String ) ]()
+        var pending = Set( [ address ] )
+        
+        while !pending.isEmpty {
+            var address = pending.removeFirst()
+            
+            while completed[address] == nil {
+                let description = try disassemble( address: address )
+                
+                func add( nextOffset: Int, addressOffset: Int ) -> Void {
+                    completed[address] = ( next: address + nextOffset, description: description )
+                    address += addressOffset
+                }
+                
+                switch Opcode( rawValue: memory[address] ) {
+                case .halt:
+                    add( nextOffset: 1, addressOffset: 0 )
+                case .set:
+                    add( nextOffset: 3, addressOffset: 3 )
+                case .push:
+                    add( nextOffset: 2, addressOffset: 2 )
+                case .pop:
+                    add( nextOffset: 2, addressOffset: 2 )
+                case .eq:
+                    add( nextOffset: 4, addressOffset: 4 )
+                case .gt:
+                    add( nextOffset: 4, addressOffset: 4 )
+                case .jmp:
+                    if let target = try immediateValue( address: address, operandNumber: 1 ) {
+                        pending.insert( target )
+                    }
+                    add( nextOffset: 2, addressOffset: 0 )
+                case .jt:
+                    if let target = try immediateValue( address: address, operandNumber: 2 ) {
+                        pending.insert( target )
+                    }
+                    add( nextOffset: 3, addressOffset: 3 )
+                case .jf:
+                    if let target = try immediateValue( address: address, operandNumber: 2 ) {
+                        pending.insert( target )
+                    }
+                    add( nextOffset: 3, addressOffset: 3 )
+                case .add:
+                    add( nextOffset: 4, addressOffset: 4 )
+                case .mult:
+                    add( nextOffset: 4, addressOffset: 4 )
+                case .mod:
+                    add( nextOffset: 4, addressOffset: 4 )
+                case .and:
+                    add( nextOffset: 4, addressOffset: 4 )
+                case .or:
+                    add( nextOffset: 4, addressOffset: 4 )
+                case .not:
+                    add( nextOffset: 3, addressOffset: 3 )
+                case .rmem:
+                    add( nextOffset: 3, addressOffset: 3 )
+                case .wmem:
+                    add( nextOffset: 3, addressOffset: 3 )
+                case .call:
+                    if let target = try immediateValue( address: address, operandNumber: 1 ) {
+                        pending.insert( target )
+                    }
+                    add( nextOffset: 2, addressOffset: 2 )
+                case .ret:
+                    add( nextOffset: 1, addressOffset: 0 )
+                case .out:
+                    add( nextOffset: 2, addressOffset: 2 )
+                case .in:
+                    add( nextOffset: 2, addressOffset: 2 )
+                case .noop:
+                    add( nextOffset: 1, addressOffset: 1 )
+                case nil:
+                    throw RuntimeError( "Invalid opcode \(memory[address]) at address \(address)." )
+                }
+            }
+        }
+        
+        var results = completed.sorted( by: { $0.key < $1.key } )
+        var index = 0
+        
+        while index < results.count - 1 {
+            if results[index].value.next < results[ index + 1 ].key {
+                results.insert( ( key: 0, value: ( next: 0, description: "..." ) ), at: index + 1 )
+                index += 1
+            }
+            index += 1
+        }
+        return results.map { $0.value.description }
     }
 }
 
