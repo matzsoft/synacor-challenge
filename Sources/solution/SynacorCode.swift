@@ -339,7 +339,7 @@ class SynacorCode: Codable {
             let destination = try fetch( operandNumber: 1 )
 
             pad()
-            line.append( "push \(ip+2); ip = \(destination)" )
+            line.append( "call \(ip+2); ip = \(destination)" )
         case .ret:
             pad()
             line.append( stack.isEmpty ? "halt" : "ip = \(stack.last!)" )
@@ -564,6 +564,53 @@ class SynacorCode: Codable {
             index += 1
         }
         return results.map { $0.value.description }
+    }
+    
+    struct StackTraceInfo: CustomStringConvertible {
+        let ip: Int
+        let opcode: String
+        let pushedValue: UInt16?
+        let r0: UInt16
+        let r1: UInt16
+        let poppedValue: UInt16?
+        var crossRow: Int?
+
+        var description: String {
+            return "\(ip),\(opcode),\( pushedValue  == nil ? "" : String( pushedValue! ) )," +
+            "\(r0),\(r1),\( poppedValue  == nil ? "" : String( poppedValue! ) )," +
+                ( crossRow  == nil ? "" : String( crossRow! + 1 ) )
+        }
+    }
+    
+    func stackTracePush( opcode: String, pushedValue: UInt16 ) -> StackTraceInfo {
+        return StackTraceInfo(
+            ip: ip, opcode: opcode, pushedValue: pushedValue,
+            r0: registers[0], r1: registers[1], poppedValue: nil, crossRow: nil
+        )
+    }
+    
+    func stackTracePop( opcode: String, poppedValue: UInt16 ) -> StackTraceInfo {
+        return StackTraceInfo(
+            ip: ip, opcode: opcode, pushedValue: nil, r0: registers[0], r1: registers[1],
+            poppedValue: poppedValue, crossRow: nil
+        )
+    }
+    
+    func stackTrace() throws -> StackTraceInfo? {
+        switch nextInstruction {
+        case .push:
+            return try stackTracePush( opcode: "push", pushedValue: fetch( operandNumber: 1 ) )
+        case .pop:
+            if stack.isEmpty { throw RuntimeError( "Trying to pop with an empty stack." ) }
+            return stackTracePop( opcode: "pop", poppedValue: stack.last! )
+        case .call:
+            return stackTracePush( opcode: "call", pushedValue: UInt16( ip + 2 ) )
+        case .ret:
+            if stack.isEmpty { throw RuntimeError( "Trying to ret with an empty stack." ) }
+            return stackTracePop( opcode: "ret", poppedValue: stack.last! )
+        default:
+            return nil
+        }
     }
 }
 
