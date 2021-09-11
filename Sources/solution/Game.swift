@@ -184,7 +184,7 @@ struct Game {
             print( String( repeating: "=", count: 32 ) )
             
             for r7 in stride( from: ( desired.isMultiple( of: 2 ) ? 2 : 1 ), to: 32768, by: 2 ) {
-                if r7 % 1000 < 2 { print( "*", terminator: "" ) }
+                if r7 % 1000 < 2 { print( "*", terminator: "" ); fflush( __stdoutp ) }
                 if synacor( m: Int( r0 ), n: Int( r1 ), mystery: r7 ) == desired {
                     print( "" )
                     print( "Setting r7 to \(r7)" )
@@ -192,7 +192,7 @@ struct Game {
                     print( "Overiding call to confirmation routine." )
                     computer.memory[5489] = SynacorCode.Opcode.noop.rawValue
                     computer.memory[5490] = SynacorCode.Opcode.noop.rawValue
-                    computer.memory[5494] = computer.memory[5493]
+                    computer.memory[5493] = desired
                     break
                 }
             }
@@ -301,28 +301,9 @@ struct Game {
     }
 }
 
-func ackermann( m: Int, n: Int, mystery: Int ) -> Int {
-    var cache = [ Int : [ Int : Int ] ]()
-    
-    func ackermann( m: Int, n: Int ) -> Int {
-        if m == 0 { return n + 1 }
-
-        if cache[m]?[n] == nil {
-            if n == 0 {
-                cache[ m, default: [:] ][n] = ackermann( m: m - 1, n: mystery )
-            } else {
-                cache[ m, default: [:] ][n] = ackermann( m: m - 1, n: ackermann( m: m, n: n - 1 ) )
-            }
-        }
-        return cache[m]![n]!
-    }
-    
-    return ackermann( m: m, n: n )
-}
-
 func synacor( m: Int, n: Int, mystery: Int ) -> Int {
     enum Place { case entry, first, store }
-    var cache = [ Int : [ Int : Int ] ]()
+    var cache = Array( repeating: Array<Int?>( repeating: nil, count: 32768 ), count: 5 )
     var stack = [ ( m, n, Place.entry ) ]
     var value = 0
     
@@ -334,7 +315,7 @@ func synacor( m: Int, n: Int, mystery: Int ) -> Int {
             if m == 0 {
                 value = ( n + 1 ) & 32767
             } else {
-                if let cached = cache[m]?[n] {
+                if let cached = cache[m][n] {
                     value = cached
                 } else {
                     stack.append( ( m, n, .store ) )
@@ -349,7 +330,7 @@ func synacor( m: Int, n: Int, mystery: Int ) -> Int {
         case .first:
             stack.append( ( m, value, .entry ) )
         case .store:
-            cache[ m, default: [:] ][n] = value
+            cache[m][n] = value
         }
     }
     
