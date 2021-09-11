@@ -15,6 +15,11 @@ struct Game {
     var trace:       Bool
     var traceBuffer: [String]
     var breakpoints: Set<Int>
+
+    var stackTrace:       Bool
+    var stackTraceBuffer: [SynacorCode.StackTraceInfo]
+    var stackTraceLimit:  Int
+    var stackTraceStack:  [Int]
     
     var isHalted:    Bool { computer.halted }
     
@@ -41,6 +46,12 @@ struct Game {
         trace       = false
         traceBuffer = []
         breakpoints = Set()
+
+        stackTrace       = false
+        stackTraceBuffer = []
+        stackTraceLimit  = Int.max
+        stackTraceStack  = []
+
     }
     
     init( from other: Game ) {
@@ -51,6 +62,11 @@ struct Game {
         trace       = other.trace
         traceBuffer = other.traceBuffer
         breakpoints = other.breakpoints
+
+        stackTrace       = other.stackTrace
+        stackTraceBuffer = other.stackTraceBuffer
+        stackTraceLimit  = other.stackTraceLimit
+        stackTraceStack  = other.stackTraceStack
     }
 
     func command( value: String ) -> Void {
@@ -72,6 +88,23 @@ struct Game {
                 try debugMode()
             }
             if trace { try traceBuffer.append( computer.trace() ) }
+            if stackTrace {
+                if var row = try computer.stackTrace() {
+                    if row.pushedValue != nil { stackTraceStack.append( stackTraceBuffer.count ) }
+                    if row.poppedValue != nil {
+                        let cross = stackTraceStack.removeLast()
+                        row.crossRow = cross
+                        stackTraceBuffer[cross].crossRow = stackTraceBuffer.count
+                    }
+                    stackTraceBuffer.append( row )
+                }
+                
+                if stackTraceBuffer.count >= stackTraceLimit {
+                    stackTrace = false
+                    print( "Stack trace full at \( try computer.disassemble( address: computer.ip ) )" )
+                    try debugMode()
+                }
+            }
             if let output = try computer.step(), output.isASCII {
                 outputQueue.append( output )
             }
@@ -140,6 +173,29 @@ struct Game {
             computer = try Game.initialComputer( from: fileURL )
         case "debug":
             try debugMode()
+            print( prompt )
+        case "solve":
+            let r0 = computer.memory[5485]
+            let r1 = computer.memory[5488]
+            let desired = computer.memory[5494]
+            
+            print( "Be patient.  This will take awhile, but not billions of years." )
+            print( "This crude progress bar will NOT fill completely." )
+            print( String( repeating: "=", count: 32 ) )
+            
+            for r7 in stride( from: ( desired.isMultiple( of: 2 ) ? 2 : 1 ), to: 32768, by: 2 ) {
+                if r7 % 1000 < 2 { print( "*", terminator: "" ) }
+                if synacor( m: Int( r0 ), n: Int( r1 ), mystery: r7 ) == desired {
+                    print( "" )
+                    print( "Setting r7 to \(r7)" )
+                    computer.registers[7] = UInt16( r7 )
+                    print( "Overiding call to confirmation routine." )
+                    computer.memory[5489] = SynacorCode.Opcode.noop.rawValue
+                    computer.memory[5490] = SynacorCode.Opcode.noop.rawValue
+                    computer.memory[5494] = computer.memory[5493]
+                    break
+                }
+            }
             print( prompt )
         case "die":
             print( "You do your best grue mating call and are soon eaten by a pack of angry grues." )
@@ -216,6 +272,26 @@ struct Game {
                 let results = try computer.disassembler( address: start ).joined( separator: "\n" )
                 
                 try results.write( toFile: file, atomically: true, encoding: .utf8 )
+            case "stack":
+                if words.count == 1 {
+                    stackTrace = !stackTrace
+                } else {
+                    switch words[1] {
+                    case "on":
+                        stackTrace = true
+                        if words.count > 2 {
+                            stackTraceLimit = Int( words[2] )!
+                        }
+                    case "off":
+                        stackTrace = false
+                    case "clear":
+                        stackTraceBuffer = []
+                    default:
+                        let buffer = stackTraceBuffer.map { "\($0)" }.joined( separator: "\n" )
+                        try buffer.write( toFile: "\(words[1]).csv", atomically: true, encoding: .utf8 )
+                    }
+                }
+                print( "Stack trace mode is now \( stackTrace ? "on" : "off" )." )
             case "go":
                 break LOOP
             default:
@@ -223,4 +299,59 @@ struct Game {
             }
         }
     }
+}
+
+func ackermann( m: Int, n: Int, mystery: Int ) -> Int {
+    var cache = [ Int : [ Int : Int ] ]()
+    
+    func ackermann( m: Int, n: Int ) -> Int {
+        if m == 0 { return n + 1 }
+
+        if cache[m]?[n] == nil {
+            if n == 0 {
+                cache[ m, default: [:] ][n] = ackermann( m: m - 1, n: mystery )
+            } else {
+                cache[ m, default: [:] ][n] = ackermann( m: m - 1, n: ackermann( m: m, n: n - 1 ) )
+            }
+        }
+        return cache[m]![n]!
+    }
+    
+    return ackermann( m: m, n: n )
+}
+
+func synacor( m: Int, n: Int, mystery: Int ) -> Int {
+    enum Place { case entry, first, store }
+    var cache = [ Int : [ Int : Int ] ]()
+    var stack = [ ( m, n, Place.entry ) ]
+    var value = 0
+    
+    while !stack.isEmpty {
+        let ( m, n, place ) = stack.removeLast()
+        
+        switch place {
+        case .entry:
+            if m == 0 {
+                value = ( n + 1 ) & 32767
+            } else {
+                if let cached = cache[m]?[n] {
+                    value = cached
+                } else {
+                    stack.append( ( m, n, .store ) )
+                    if n == 0 {
+                        stack.append( ( m - 1, mystery, .entry ) )
+                    } else {
+                        stack.append( ( m - 1, value, .first ) )
+                        stack.append( ( m, n - 1, .entry ) )
+                    }
+                }
+            }
+        case .first:
+            stack.append( ( m, value, .entry ) )
+        case .store:
+            cache[ m, default: [:] ][n] = value
+        }
+    }
+    
+    return value
 }
