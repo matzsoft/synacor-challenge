@@ -115,7 +115,7 @@ struct Game {
         return outputQueue
     }
     
-    mutating func send( command: String ) throws -> String {
+    @discardableResult mutating func send( command: String ) throws -> String {
         if !runQuiet { print( command ) }
         self.command( value: command )
         
@@ -175,34 +175,58 @@ struct Game {
             try debugMode()
             print( prompt )
         case "solve":
-            let r0 = computer.memory[5485]
-            let r1 = computer.memory[5488]
-            let desired = computer.memory[5494]
-            
-            print( "Be patient.  This will take awhile, but not billions of years." )
-            print( "This crude progress bar will NOT fill completely." )
-            print( String( repeating: "=", count: 32 ) )
-            
-            for r7 in stride( from: ( desired.isMultiple( of: 2 ) ? 2 : 1 ), to: 32768, by: 2 ) {
-                if r7 % 1000 < 2 { print( "*", terminator: "" ); fflush( __stdoutp ) }
-                if synacor( m: Int( r0 ), n: Int( r1 ), mystery: r7 ) == desired {
-                    print( "" )
-                    print( "Setting r7 to \(r7)" )
-                    computer.registers[7] = UInt16( r7 )
-                    print( "Overiding call to confirmation routine." )
-                    computer.memory[5489] = SynacorCode.Opcode.noop.rawValue
-                    computer.memory[5490] = SynacorCode.Opcode.noop.rawValue
-                    computer.memory[5493] = desired
-                    break
-                }
+            guard words.count > 1 else {
+                print( "Solve what?" )
+                print( prompt )
+                break
             }
-            print( prompt )
+            switch words[1] {
+            case "teleporter":
+                solveTeleporter( prompt: prompt )
+            case "vault":
+                try solveVault()
+            default:
+                print( "Don't know how to solve \(words[1])." )
+                print( prompt )
+            }
         case "die":
             print( "You do your best grue mating call and are soon eaten by a pack of angry grues." )
             computer.halted = true
         default:
             command( value: line )
         }
+    }
+    
+    func solveTeleporter( prompt: String ) -> Void {
+        let r0 = computer.memory[5485]
+        let r1 = computer.memory[5488]
+        let desired = computer.memory[5494]
+        
+        print( "Be patient.  This will take awhile, but not billions of years." )
+        print( "This crude progress bar will NOT fill completely." )
+        print( String( repeating: "=", count: 32 ) )
+        
+        for r7 in stride( from: ( desired.isMultiple( of: 2 ) ? 2 : 1 ), to: 32768, by: 2 ) {
+            if r7 % 1000 < 2 { print( "*", terminator: "" ); fflush( __stdoutp ) }
+            if synacor( m: Int( r0 ), n: Int( r1 ), mystery: r7 ) == desired {
+                print( "" )
+                print( "Setting r7 to \(r7)" )
+                computer.registers[7] = UInt16( r7 )
+                print( "Overiding call to confirmation routine." )
+                computer.memory[5489] = SynacorCode.Opcode.noop.rawValue
+                computer.memory[5490] = SynacorCode.Opcode.noop.rawValue
+                computer.memory[5493] = desired
+                break
+            }
+        }
+        print( prompt )
+    }
+    
+    mutating func solveVault() throws -> Void {
+        let vault = Vault()
+        
+        try send( command: "take orb" )
+        try vault.findShortestPath().forEach { try send( command: "\($0)" ) }
     }
     
     mutating func debugMode() throws -> Void {
