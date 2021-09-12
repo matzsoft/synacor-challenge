@@ -155,6 +155,15 @@ struct Game {
         }
         
         switch words[0] {
+        case "help":
+            if words.count > 1 {
+                helpCommand( argument: words[1] )
+                print( prompt )
+            } else {
+                print( "The metacommands are save, restore, restart, debug, solve, and die. ",
+                       "For more information type \"help <command>\"." )
+                command( value: "help" )
+            }
         case "save":
             let encoder = JSONEncoder()
             let json = try encoder.encode( computer )
@@ -194,6 +203,66 @@ struct Game {
             computer.halted = true
         default:
             command( value: line )
+        }
+    }
+    
+    func helpCommand<T: StringProtocol>( argument: T ) -> Void {
+        switch argument {
+        case "save":
+            print( "Saves the current game state to a .json file. With no argument, the file will be",
+                   "challenge.json.  If an argument is given it will be used as the name of the file.\n" )
+        case "restore":
+            print( "Restores the game state from a previously saved .json file. With no argument, the",
+                   "file will be challenge.json.  If an argument is given it will be used as the name of",
+                   "the file.\n" )
+        case "restart":
+            print( "Restarts your game from the beginning, all changes lost.\n" )
+        case "debug":
+            print( "Enter a debug mode where you can interact directly with the computer running the game.",
+                   "Commands are:\n" )
+            print( "b - set or list breakpoints. With no argument, all current breakpoints will be listed.",
+                   "If an argument is given, it should be the address of where you wish to set a",
+                   "breakpoint. When the computer is about to execute an instruction that has a",
+                   "breakpoint set, it will instead enter debug mode.\n" )
+            print( "B - clear or list breakpoints. With no argument, all current breakpoints will be",
+                   "listed. If an argument is given, it should be the address of a breakpoint that",
+                   "you wish to clear.\n" )
+            print( "ip - display or change the instruction pointer.  With no argument, the current",
+                   "value of the ip is displayed. To change the value give an acceptable number",
+                   "as the argument.\n" )
+            print( "r0, r1, ..., r7 - display or change the value of a register. Works like ip.\n" )
+            print( "address - display or change the value of a memory location. Works like ip.\n" )
+            print( "trace - work with trace mode. When trace mode is on, just before each instruction",
+                   "is executed a line is placed in the trace buffer.  The line consists of the ip address,",
+                   "the disassembled instruction, and an interpretation of the instruction's action.",
+                   "The trace command takes one optional argument.  An argument of on or off turns trace",
+                   "mode on or off respectively.  No argument toggles the mode.  An argument of clear will",
+                   "empty the trace buffer. Any other argument is taken as the name of a file where",
+                   "the trace buffer will be written. The file will be given the extension .trace.\n" )
+            print( "disassemble - disassembles a portion of memory and writes the result to a file. The",
+                   "command has two optional arguments.  The first argument is the address to start the",
+                   "disassembly. It defaults to zero.  The second argument is the name of the file to",
+                   "contain the results.  It defaults to \"challenge\" and a .asm extension is added.",
+                   "The disassembly follows all execution paths that it can.\n" )
+            print( "stack - works with stack trace mode.  This works like trace mode with some important",
+                   "differences.  One big difference is that only instructions that affect the stack are",
+                   "traced. Another is that \"stack on\" can take an addition argument, the stack trace",
+                   "limit.  When set and the stack trace buffer reaches the limit, a breakpoint will be",
+                   "simulated. Finally the output is quite different and hence is written to a .csv file.",
+                   "There are 7 columns in the data - ip, opcode, pushed value, r0, r1, popped value, and",
+                   "cross row.  The cross row is a one relative line number within the output that points",
+                   "to the other side of the push or pop operation.\n" )
+            print( "go - resumes execution of the program.  That is it exits debug mode.\n")
+        case "solve":
+            print( "Requires an argument which may be either teleporter or vault.\n" )
+            print( "For teleporter, you must have the teleporter in your possession. The game will be",
+                   "modified so that \"use teleporter\" will take you to the alternate destination.\n" )
+            print( "For vault, you must be in the Vault Antechamber.  You will be moved to the Vault",
+                   "Door with the vault unlocked.\n" )
+        case "die":
+            print( "Ends your game and exits the program.\n" )
+        default:
+            print( "No help available for \(argument).\n" )
         }
     }
     
