@@ -124,7 +124,7 @@ struct Game {
         return output
     }
     
-    mutating func interactive() throws -> String {
+    @discardableResult mutating func interactive() throws -> String {
         while true {
             let output = try runUntilInput()
 

@@ -90,11 +90,11 @@ struct Vault: CustomStringConvertible {
     
     init() {
         map = [
-            [ Node.start,          Node.operation( - ), Node.value( 9 ),     Node.operation( * ) ],
-            [ Node.operation( + ), Node.value( 4 ),     Node.operation( - ), Node.value( 18 )    ],
+            [ Node.operation( * ), Node.value( 8 ),     Node.operation( - ), Node.target( 1 )    ],
             [ Node.value( 4 ),     Node.operation( * ), Node.value( 11 ),    Node.operation( * ) ],
-            [ Node.operation( * ), Node.value( 8 ),     Node.operation( - ), Node.target( 1 )    ]
-        ]
+            [ Node.operation( + ), Node.value( 4 ),     Node.operation( - ), Node.value( 18 )    ],
+            [ Node.start,          Node.operation( - ), Node.value( 9 ),     Node.operation( * ) ],
+        ].reversed()
     }
     
     subscript( position: Position ) -> Node? {
